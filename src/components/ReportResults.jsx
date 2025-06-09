@@ -374,71 +374,71 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
         )}
 
         {/* Action modals */}
-        <Modal
-          isOpen={showModal}
-          onClose={() => setShowModal(false)}
-          title={modalType === 'pdf' ? 'Download PDF Report' : 'Email Report'}
-        >
-          {modalType === 'pdf' ? (
-            <div className="mt-4">
-              <p className="text-sm text-gray-500">
-                The PDF report will include all test results, screenshots, and recommendations.
-              </p>
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => {
-                    onDownloadPdf();
-                    setShowModal(false);
-                  }}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  Download PDF
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="mt-4">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                Email address
-              </label>
-              <input
-                type="email"
-                id="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                placeholder="Enter email address"
-              />
-              {error && (
-                <p className="mt-2 text-sm text-red-600">{error}</p>
-              )}
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={async () => {
-                    if (!emailAddress) {
-                      setError('Please enter an email address');
-                      return;
-                    }
-                    setIsSending(true);
-                    setError(null);
-                    try {
-                      await onSendEmail(emailAddress);
+        {showModal && (
+          <Modal
+            onClose={() => setShowModal(false)}
+          >
+            {modalType === 'pdf' ? (
+              <div className="mt-4">
+                <p className="text-sm text-gray-500">
+                  The PDF report will include all test results, screenshots, and recommendations.
+                </p>
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={() => {
+                      onDownloadPdf();
                       setShowModal(false);
-                    } catch (err) {
-                      setError(err.message || 'Failed to send email');
-                    } finally {
-                      setIsSending(false);
-                    }
-                  }}
-                  disabled={isSending}
-                  className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  {isSending ? 'Sending...' : 'Send Report'}
-                </button>
+                    }}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Download PDF
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-        </Modal>
+            ) : (
+              <div className="mt-4">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                  Email address
+                </label>
+                <input
+                  type="email"
+                  id="email"
+                  value={emailAddress}
+                  onChange={(e) => setEmailAddress(e.target.value)}
+                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Enter email address"
+                />
+                {error && (
+                  <p className="mt-2 text-sm text-red-600">{error}</p>
+                )}
+                <div className="mt-4 flex justify-end">
+                  <button
+                    onClick={async () => {
+                      if (!emailAddress) {
+                        setError('Please enter an email address');
+                        return;
+                      }
+                      setIsSending(true);
+                      setError(null);
+                      try {
+                        await onSendEmail(emailAddress);
+                        setShowModal(false);
+                      } catch (err) {
+                        setError(err.message || 'Failed to send email');
+                      } finally {
+                        setIsSending(false);
+                      }
+                    }}
+                    disabled={isSending}
+                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    {isSending ? 'Sending...' : 'Send Report'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </Modal>
+        )}
       </div>
     </div>
   );
