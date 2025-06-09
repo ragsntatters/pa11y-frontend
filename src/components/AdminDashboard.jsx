@@ -206,7 +206,7 @@ export default function AdminDashboard({ onLogout }) {
               {reports.map(r => (
                 <tr key={r._id} className="border-t border-blue-100">
                   <td className="border px-4 py-2">
-                    <Badge color={r.type === 'admin' ? 'primary' : 'warning'}>{r.type === 'admin' ? 'ADMIN' : 'USER'}</Badge>
+                    <Badge variant={r.type === 'admin' ? 'success' : 'info'}>{r.type === 'admin' ? 'ADMIN' : 'USER'}</Badge>
                   </td>
                   <td className="border px-4 py-2">{r.url}</td>
                   <td className="border px-4 py-2">{r.email}</td>
