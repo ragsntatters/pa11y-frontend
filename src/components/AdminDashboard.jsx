@@ -213,6 +213,7 @@ export default function AdminDashboard({ onLogout }) {
                   <td className="border px-4 py-2">{new Date(r.createdAt).toLocaleString()}</td>
                   <td className="border px-4 py-2 flex gap-2 items-center">
                     <a href={`/api/report/${r._id}/pdf`} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Download PDF</a>
+                    <a href={`/report/${r._id}`} className="text-green-600 hover:underline ml-2">View Report</a>
                     <button
                       onClick={() => handleDelete(r._id)}
                       className="bg-red-600 hover:bg-red-700 text-white px-2 py-1 rounded text-xs ml-2"
