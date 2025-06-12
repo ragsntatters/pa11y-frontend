@@ -309,7 +309,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                     </h3>
                     {result.context && (
                       <div className="mt-2">
-                        <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                        <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto text-gray-800">
                           {result.context}
                         </pre>
                       </div>
