@@ -110,6 +110,53 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
     return allResults.filter(r => !r.passed);
   }, [allResults, activeTab]);
 
+  // WCAG-relevant categories mapping
+  const CATEGORY_MAP = [
+    {
+      key: 'screenreader',
+      label: 'Screen Reader and Assistive Technology Tests',
+      match: (issue) => (
+        /heading|aria|label|name|screen reader|alt text|descernible|aria/i.test(issue.message || '') ||
+        /aria|heading|label|name|descernible/i.test(issue.code || '')
+      ),
+    },
+    {
+      key: 'visual',
+      label: 'Visual and Structural Accessibility Tests',
+      match: (issue) => (
+        /contrast|color|visual|structure|font|background/i.test(issue.message || '') ||
+        /contrast|color/i.test(issue.code || '')
+      ),
+    },
+    {
+      key: 'navigation',
+      label: 'Interaction and Navigation Tests',
+      match: (issue) => (
+        /keyboard|focus|tab|navigation|skip|order|interactive/i.test(issue.message || '') ||
+        /keyboard|focus|tab/i.test(issue.code || '')
+      ),
+    },
+  ];
+
+  function categorizeIssues(issues) {
+    const categories = {};
+    CATEGORY_MAP.forEach(cat => { categories[cat.key] = []; });
+    categories.other = [];
+    issues.forEach(issue => {
+      const found = CATEGORY_MAP.find(cat => cat.match(issue));
+      if (found) {
+        categories[found.key].push(issue);
+      } else {
+        categories.other.push(issue);
+      }
+    });
+    return categories;
+  }
+
+  // Only show failing issues (not passed)
+  const failingResults = filteredResults.filter(r => !r.passed);
+  const categorized = useMemo(() => categorizeIssues(failingResults), [failingResults]);
+
   const handleDownloadPdf = async () => {
     setModalType('pdf');
     setShowModal(true);
@@ -279,74 +326,79 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
         </div>
 
         {/* Results list */}
-        <div className="space-y-4">
-          {filteredResults.map((result, index) => (
-            <div
-              key={`${result.type}-${index}`}
-              className={`bg-white rounded-lg shadow-sm overflow-hidden ${
-                result.passed ? 'border border-green-200' : 'border border-red-200'
-              }`}
-            >
-              <div className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <Badge
-                        variant={result.passed ? 'success' : 
-                                result.severity === 'critical' ? 'error' :
-                                result.severity === 'serious' ? 'warning' : 'info'}
-                      >
-                        {result.passed ? 'Passed' : 
-                         result.severity === 'critical' ? 'Critical' :
-                         result.severity === 'serious' ? 'Serious' : 'Moderate'}
-                      </Badge>
-                      <span className="text-sm text-gray-500">
-                        {result.type === 'pa11y' ? 'Pa11y' : 'Axe'}
-                      </span>
-                    </div>
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">
-                      {result.message}
-                    </h3>
-                    {result.context && (
-                      <div className="mt-2">
-                        <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto text-gray-800" style={{ color: '#1F2937' }}>
-                          {result.context}
-                        </pre>
-                      </div>
-                    )}
-                    {result.help && (
-                      <p className="mt-2 text-sm text-gray-600">
-                        {result.help}
-                      </p>
-                    )}
-                    {result.helpUrl && (
-                      <a
-                        href={result.helpUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
-                      >
-                        Learn more
-                        <ExternalLink className="h-4 w-4 ml-1" />
-                      </a>
-                    )}
-                  </div>
-                  {result.screenshot && (
-                    <button
-                      onClick={() => setSelectedIssue(result)}
-                      className="ml-4 flex-shrink-0"
+        <div className="space-y-8">
+          {Object.entries(categorized).map(([catKey, issues]) =>
+            issues.length > 0 && (
+              <div key={catKey}>
+                <h2 className="text-lg font-bold mb-2">
+                  {CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}
+                </h2>
+                <div className="space-y-4">
+                  {issues.map((result, index) => (
+                    <div
+                      key={`${result.type}-${index}`}
+                      className={`bg-white rounded-lg shadow-sm overflow-hidden border border-red-200`}
                     >
-                      <img
-                        src={result.screenshot}
-                        alt="Issue screenshot"
-                        className="h-20 w-20 object-cover rounded border border-gray-200 hover:border-blue-500 transition-colors"
-                      />
-                    </button>
-                  )}
+                      <div className="p-4">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <Badge
+                                variant={result.severity === 'critical' ? 'error' : result.severity === 'serious' ? 'warning' : 'info'}
+                              >
+                                {result.severity === 'critical' ? 'Critical' : result.severity === 'serious' ? 'Serious' : 'Moderate'}
+                              </Badge>
+                              <span className="text-sm text-gray-500">
+                                {result.type === 'pa11y' ? 'Pa11y' : 'Axe'}
+                              </span>
+                            </div>
+                            <h3 className="mt-2 text-sm font-medium text-gray-900">
+                              {result.message}
+                            </h3>
+                            {result.context && (
+                              <div className="mt-2">
+                                <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto text-gray-800" style={{ color: '#1F2937' }}>
+                                  {result.context}
+                                </pre>
+                              </div>
+                            )}
+                            {result.help && (
+                              <p className="mt-2 text-sm text-gray-600">
+                                {result.help}
+                              </p>
+                            )}
+                            {result.helpUrl && (
+                              <a
+                                href={result.helpUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                              >
+                                Learn more
+                                <ExternalLink className="h-4 w-4 ml-1" />
+                              </a>
+                            )}
+                          </div>
+                          {result.screenshot && (
+                            <button
+                              onClick={() => setSelectedIssue(result)}
+                              className="ml-4 flex-shrink-0"
+                            >
+                              <img
+                                src={result.screenshot}
+                                alt="Issue screenshot"
+                                className="h-20 w-20 object-cover rounded border border-gray-200 hover:border-blue-500 transition-colors"
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
 
         {/* Screenshot modal */}
