@@ -22,80 +22,93 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const totalTests = totalIssues + totalPassed;
   const score = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
 
-  // Helper: is WCAG AA (axe or pa11y)
-  function isWcagAA(issue) {
+  // Helper: check if issue matches selected WCAG level
+  function matchesWcagLevel(issue, wcagLevel) {
     // For Axe issues, check if it matches the current WCAG level
     if (issue.type === 'axe' && issue.tags && Array.isArray(issue.tags)) {
-      return issue.tags.some(tag => tag.includes('wcag2'));
+      return issue.tags.some(tag => tag.includes(`wcag2${wcagLevel.toLowerCase()}`));
     }
-    // For Pa11y issues, check if it's a WCAG issue
+    // For Pa11y issues, check if it matches the WCAG level
     if (issue.type === 'pa11y') {
       const code = (issue.code || '').toLowerCase();
       const helpUrl = (issue.helpUrl || '').toLowerCase();
-      return code.includes('wcag2') || helpUrl.includes('wcag2');
+      return (
+        code.includes(`wcag2${wcagLevel.toLowerCase()}`) || 
+        helpUrl.includes(`wcag2${wcagLevel.toLowerCase()}`) ||
+        (code.includes('wcag2') && helpUrl.includes(wcagLevel.toLowerCase()))
+      );
     }
     return false;
   }
 
-  // Combine and sort all test results
+  // Combine and sort all test results based on WCAG level
   const allResults = useMemo(() => {
     const results = [];
+    const wcagLevel = report.wcagLevel || 'AA'; // Default to AA if not specified
 
-    // Add Pa11y issues
+    // Add Pa11y issues matching WCAG level
     (report.pa11y?.issues || []).forEach(issue => {
-      results.push({
-        ...issue,
-        type: 'pa11y',
-        severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
-        passed: false
-      });
-    });
-
-    // Add Axe violations
-    (report.axe?.violations || []).forEach(violation => {
-      violation.nodes.forEach(node => {
+      if (matchesWcagLevel({ ...issue, type: 'pa11y' }, wcagLevel)) {
         results.push({
-          ...violation,
-          ...node,
-          type: 'axe',
-          severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
-          message: violation.description,
-          selector: node.target?.[0],
-          context: node.html,
-          screenshot: node.screenshot,
-          help: violation.help,
-          helpUrl: violation.helpUrl,
-          impact: violation.impact,
-          tags: violation.tags,
+          ...issue,
+          type: 'pa11y',
+          severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
           passed: false
         });
-      });
+      }
     });
 
-    // Add Pa11y passed tests
-    (report.pa11y?.passed || []).forEach(passed => {
-      results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
-    });
-
-    // Add Axe passed tests
-    (report.axe?.passes || []).forEach(pass => {
-      pass.nodes.forEach(node => {
-        results.push({
-          ...pass,
-          ...node,
-          type: 'axe',
-          severity: 'passed',
-          message: pass.description,
-          selector: node.target?.[0],
-          context: node.html,
-          screenshot: node.screenshot,
-          help: pass.help,
-          helpUrl: pass.helpUrl,
-          impact: 'passed',
-          tags: pass.tags,
-          passed: true
+    // Add Axe violations matching WCAG level
+    (report.axe?.violations || []).forEach(violation => {
+      if (matchesWcagLevel({ ...violation, type: 'axe' }, wcagLevel)) {
+        violation.nodes.forEach(node => {
+          results.push({
+            ...violation,
+            ...node,
+            type: 'axe',
+            severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
+            message: violation.description,
+            selector: node.target?.[0],
+            context: node.html,
+            screenshot: node.screenshot,
+            help: violation.help,
+            helpUrl: violation.helpUrl,
+            impact: violation.impact,
+            tags: violation.tags,
+            passed: false
+          });
         });
-      });
+      }
+    });
+
+    // Add Pa11y passed tests matching WCAG level
+    (report.pa11y?.passed || []).forEach(passed => {
+      if (matchesWcagLevel({ ...passed, type: 'pa11y' }, wcagLevel)) {
+        results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
+      }
+    });
+
+    // Add Axe passed tests matching WCAG level
+    (report.axe?.passes || []).forEach(pass => {
+      if (matchesWcagLevel({ ...pass, type: 'axe' }, wcagLevel)) {
+        pass.nodes.forEach(node => {
+          results.push({
+            ...pass,
+            ...node,
+            type: 'axe',
+            severity: 'passed',
+            message: pass.description,
+            selector: node.target?.[0],
+            context: node.html,
+            screenshot: node.screenshot,
+            help: pass.help,
+            helpUrl: pass.helpUrl,
+            impact: 'passed',
+            tags: pass.tags,
+            passed: true
+          });
+        });
+      }
     });
 
     // Sort by severity (critical first, then passed tests)
@@ -238,6 +251,9 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const compliant = score >= 95;
   const axeViolations = axe?.violations || [];
 
+  // Add WCAG level display to the header
+  const wcagLevel = report.wcagLevel || 'AA';
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -278,7 +294,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900">Accessibility Report</h1>
                 <p className="text-sm text-gray-500 mt-1">
-                  {totalTests} total tests • {totalPassed} passed • {totalIssues} issues found
+                  WCAG {wcagLevel} • {totalTests} total tests • {totalPassed} passed • {totalIssues} issues found
                 </p>
               </div>
             </div>
