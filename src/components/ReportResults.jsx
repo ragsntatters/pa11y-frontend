@@ -24,89 +24,78 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
 
   // Helper: is WCAG AA (axe or pa11y)
   function isWcagAA(issue) {
-    // Axe: tags includes 'wcag2aa'
+    // For Axe issues, check if it matches the current WCAG level
     if (issue.type === 'axe' && issue.tags && Array.isArray(issue.tags)) {
-      return issue.tags.includes('wcag2aa');
+      return issue.tags.some(tag => tag.includes('wcag2'));
     }
-    // Pa11y: code/helpUrl includes 'wcag2aa' or 'wcag2' and level AA if available
+    // For Pa11y issues, check if it's a WCAG issue
     if (issue.type === 'pa11y') {
       const code = (issue.code || '').toLowerCase();
       const helpUrl = (issue.helpUrl || '').toLowerCase();
-      return (
-        code.includes('wcag2aa') || helpUrl.includes('wcag2aa') ||
-        (code.includes('wcag2') && (code.includes('aa') || helpUrl.includes('aa')))
-      );
+      return code.includes('wcag2') || helpUrl.includes('wcag2');
     }
     return false;
   }
 
-  // Combine and sort all test results (WCAG AA only)
+  // Combine and sort all test results
   const allResults = useMemo(() => {
     const results = [];
 
-    // Add Pa11y issues (WCAG AA only)
+    // Add Pa11y issues
     (report.pa11y?.issues || []).forEach(issue => {
-      if (isWcagAA({ ...issue, type: 'pa11y' })) {
+      results.push({
+        ...issue,
+        type: 'pa11y',
+        severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
+        passed: false
+      });
+    });
+
+    // Add Axe violations
+    (report.axe?.violations || []).forEach(violation => {
+      violation.nodes.forEach(node => {
         results.push({
-          ...issue,
-          type: 'pa11y',
-          severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
+          ...violation,
+          ...node,
+          type: 'axe',
+          severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
+          message: violation.description,
+          selector: node.target?.[0],
+          context: node.html,
+          screenshot: node.screenshot,
+          help: violation.help,
+          helpUrl: violation.helpUrl,
+          impact: violation.impact,
+          tags: violation.tags,
           passed: false
         });
-      }
+      });
     });
 
-    // Add Axe violations (WCAG AA only)
-    (report.axe?.violations || []).forEach(violation => {
-      if (violation.tags && violation.tags.includes('wcag2aa')) {
-        violation.nodes.forEach(node => {
-          results.push({
-            ...violation,
-            ...node,
-            type: 'axe',
-            severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
-            message: violation.description,
-            selector: node.target?.[0],
-            context: node.html,
-            screenshot: node.screenshot,
-            help: violation.help,
-            helpUrl: violation.helpUrl,
-            impact: violation.impact,
-            tags: violation.tags,
-            passed: false
-          });
-        });
-      }
-    });
-
-    // Add Pa11y passed tests (WCAG AA only)
+    // Add Pa11y passed tests
     (report.pa11y?.passed || []).forEach(passed => {
-      if (isWcagAA({ ...passed, type: 'pa11y' })) {
-        results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
-      }
+      results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
     });
 
-    // Add Axe passed tests (WCAG AA only)
+    // Add Axe passed tests
     (report.axe?.passes || []).forEach(pass => {
-      if (pass.tags && pass.tags.includes('wcag2aa')) {
-        pass.nodes.forEach(node => {
-          results.push({
-            ...pass,
-            ...node,
-            type: 'axe',
-            severity: 'passed',
-            message: pass.description,
-            selector: node.target?.[0],
-            context: node.html,
-            screenshot: node.screenshot,
-            help: pass.help,
-            helpUrl: pass.helpUrl,
-            impact: 'passed',
-            tags: pass.tags,
-            passed: true
-          });
+      pass.nodes.forEach(node => {
+        results.push({
+          ...pass,
+          ...node,
+          type: 'axe',
+          severity: 'passed',
+          message: pass.description,
+          selector: node.target?.[0],
+          context: node.html,
+          screenshot: node.screenshot,
+          help: pass.help,
+          helpUrl: pass.helpUrl,
+          impact: 'passed',
+          tags: pass.tags,
+          passed: true
         });
-      }
+      });
     });
 
     // Sort by severity (critical first, then passed tests)
@@ -122,30 +111,42 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
     return allResults.filter(r => !r.passed);
   }, [allResults, activeTab]);
 
-  // WCAG-relevant categories mapping
+  // WCAG-relevant categories mapping with improved matching
   const CATEGORY_MAP = [
     {
       key: 'screenreader',
       label: 'Screen Reader and Assistive Technology Tests',
       match: (issue) => (
-        /heading|aria|label|name|screen reader|alt text|descernible|aria/i.test(issue.message || '') ||
-        /aria|heading|label|name|descernible/i.test(issue.code || '')
+        /heading|aria|label|name|screen reader|alt text|descernible|role|semantic|landmark/i.test(issue.message || '') ||
+        /aria|heading|label|name|descernible|role|semantic|landmark/i.test(issue.code || '') ||
+        /aria|heading|label|name|descernible|role|semantic|landmark/i.test(issue.help || '')
       ),
     },
     {
       key: 'visual',
       label: 'Visual and Structural Accessibility Tests',
       match: (issue) => (
-        /contrast|color|visual|structure|font|background/i.test(issue.message || '') ||
-        /contrast|color/i.test(issue.code || '')
+        /contrast|color|visual|structure|font|background|spacing|layout|responsive|zoom|text size/i.test(issue.message || '') ||
+        /contrast|color|visual|structure|font|background|spacing|layout|responsive|zoom|text size/i.test(issue.code || '') ||
+        /contrast|color|visual|structure|font|background|spacing|layout|responsive|zoom|text size/i.test(issue.help || '')
       ),
     },
     {
       key: 'navigation',
       label: 'Interaction and Navigation Tests',
       match: (issue) => (
-        /keyboard|focus|tab|navigation|skip|order|interactive/i.test(issue.message || '') ||
-        /keyboard|focus|tab/i.test(issue.code || '')
+        /keyboard|focus|tab|navigation|skip|order|interactive|click|hover|pointer|target|link|button/i.test(issue.message || '') ||
+        /keyboard|focus|tab|navigation|skip|order|interactive|click|hover|pointer|target|link|button/i.test(issue.code || '') ||
+        /keyboard|focus|tab|navigation|skip|order|interactive|click|hover|pointer|target|link|button/i.test(issue.help || '')
+      ),
+    },
+    {
+      key: 'content',
+      label: 'Content and Language Tests',
+      match: (issue) => (
+        /language|content|text|readable|understandable|language|translation|localization/i.test(issue.message || '') ||
+        /language|content|text|readable|understandable|language|translation|localization/i.test(issue.code || '') ||
+        /language|content|text|readable|understandable|language|translation|localization/i.test(issue.help || '')
       ),
     },
   ];
