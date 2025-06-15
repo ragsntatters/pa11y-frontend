@@ -350,7 +350,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
           {Object.entries(categorized).map(([catKey, issues]) =>
             issues.length > 0 && (
               <div key={catKey}>
-                <h2 className="text-lg font-bold mb-2">
+                <h2 className="text-lg font-bold mb-2 text-gray-900">
                   {CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}
                 </h2>
                 <div className="space-y-4">
