@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Mail, ExternalLink, AlertTriangle, CheckCircle, XCircle, Info, Eye, Calendar, Globe, Filter, X } from 'lucide-react';
+import { Download, Mail, ExternalLink, AlertTriangle, CheckCircle, XCircle, Info, Eye, Calendar, Globe } from 'lucide-react';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 
@@ -7,10 +7,11 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const [activeTab, setActiveTab] = useState('issues');
   const [selectedIssue, setSelectedIssue] = useState(null);
   const [showModal, setShowModal] = useState(false);
-  const [modalType, setModalType] = useState(''); // 'pdf' or 'email'
+  const [modalType, setModalType] = useState('');
   const [emailAddress, setEmailAddress] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
 
   if (!report) return null;
 
@@ -21,6 +22,67 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                      (report.axe?.passes?.reduce((sum, p) => sum + p.nodes.length, 0) || 0);
   const totalTests = totalIssues + totalPassed;
   const score = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
+  const wcagLevel = report.wcagLevel || 'AA';
+  const compliant = score >= 95;
+
+  const handleDownloadPdf = async () => {
+    setIsPdfGenerating(true);
+    await onDownloadPdf();
+    setIsPdfGenerating(false);
+  };
+
+  const handleSendEmail = async () => {
+    setModalType('email');
+    setShowModal(true);
+  };
+
+  const getScoreColor = (score) => {
+    if (score >= 90) return 'text-green-600';
+    if (score >= 70) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const CircularProgress = ({ score }) => {
+    const circumference = 2 * Math.PI * 45;
+    const strokeDasharray = circumference;
+    const strokeDashoffset = circumference - (score / 100) * circumference;
+
+    return (
+      <div className="relative w-32 h-32">
+        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            className="text-gray-200"
+          />
+          <circle
+            cx="50"
+            cy="50"
+            r="45"
+            stroke="currentColor"
+            strokeWidth="8"
+            fill="transparent"
+            strokeDasharray={strokeDasharray}
+            strokeDashoffset={strokeDashoffset}
+            className={getScoreColor(score)}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className={`text-2xl font-bold ${getScoreColor(score)}`}>
+              {score}
+            </div>
+            <div className="text-xs text-gray-500">SCORE</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   // Helper: check if issue matches selected WCAG level
   function matchesWcagLevel(issue, wcagLevel) {
@@ -184,135 +246,115 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const passedResults = filteredResults.filter(r => r.passed);
   const categorized = useMemo(() => categorizeIssues(activeTab === 'passed' ? passedResults : failingResults), [activeTab, failingResults, passedResults]);
 
-  const handleDownloadPdf = async () => {
-    setModalType('pdf');
-    setShowModal(true);
-  };
-
-  const handleSendEmail = async () => {
-    setModalType('email');
-    setShowModal(true);
-  };
-
-  const getScoreColor = (score) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 70) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const CircularProgress = ({ score }) => {
-    const circumference = 2 * Math.PI * 45;
-    const strokeDasharray = circumference;
-    const strokeDashoffset = circumference - (score / 100) * circumference;
-
-    return (
-      <div className="relative w-32 h-32">
-        <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            stroke="currentColor"
-            strokeWidth="8"
-            fill="transparent"
-            className="text-gray-200"
-          />
-          <circle
-            cx="50"
-            cy="50"
-            r="45"
-            stroke="currentColor"
-            strokeWidth="8"
-            fill="transparent"
-            strokeDasharray={strokeDasharray}
-            strokeDashoffset={strokeDashoffset}
-            className={getScoreColor(score)}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center">
-            <div className={`text-2xl font-bold ${getScoreColor(score)}`}>
-              {score}
-            </div>
-            <div className="text-xs text-gray-500">SCORE</div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const { url, pa11y, axe, email, type, createdAt } = report;
-  const allIssues = pa11y?.issues || [];
-  const criticalIssues = allIssues.filter(issue => issue.type === 'error' || issue.type === 'warning');
-  const noticeIssues = allIssues.filter(issue => issue.type === 'notice');
-  const issues = activeTab === 'issues' ? allIssues : criticalIssues;
-  const passed = pa11y?.passed || [];
-  const compliant = score >= 95;
-  const axeViolations = axe?.violations || [];
-
-  // Add WCAG level display to the header
-  const wcagLevel = report.wcagLevel || 'AA';
-
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header with score and actions */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex flex-col md:flex-row items-center justify-between">
-            <div className="flex items-center space-x-6 mb-4 md:mb-0">
-              <div className="relative">
-                <svg className="w-24 h-24">
-                  <circle
-                    className="text-gray-200"
-                    strokeWidth="8"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="44"
-                    cx="48"
-                    cy="48"
-                  />
-                  <circle
-                    className={`${score >= 90 ? 'text-green-500' : 
-                               score >= 70 ? 'text-yellow-500' : 
-                               'text-red-500'}`}
-                    strokeWidth="8"
-                    strokeDasharray={`${score * 2.76} 276`}
-                    strokeLinecap="round"
-                    stroke="currentColor"
-                    fill="transparent"
-                    r="44"
-                    cx="48"
-                    cy="48"
-                    transform="rotate(-90 48 48)"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-2xl font-bold">{score}</span>
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <header className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Accessibility Report
+              </h1>
+              <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Globe className="w-4 h-4" />
+                  <span>{report.url}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+                </div>
+                <div className="flex items-center space-x-1">
+                  <Badge variant="info">WCAG {wcagLevel}</Badge>
                 </div>
               </div>
-              <div>
-                <h1 className="text-2xl font-bold text-gray-900">Accessibility Report</h1>
-                <p className="text-sm text-gray-500 mt-1">
-                  WCAG {wcagLevel} • {totalTests} total tests • {totalPassed} passed • {totalIssues} issues found
-                </p>
-              </div>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleDownloadPdf}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Download PDF
-              </button>
+            <div className="flex space-x-3 mt-4 sm:mt-0">
               <button
                 onClick={handleSendEmail}
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                disabled={isSending}
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
-                <Mail className="h-4 w-4 mr-2" />
-                Email Report
+                {isSending ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600" />
+                ) : (
+                  <Mail className="w-4 h-4" />
+                )}
+                <span>Email Report</span>
               </button>
+              <button
+                onClick={handleDownloadPdf}
+                disabled={isPdfGenerating}
+                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
+              >
+                {isPdfGenerating ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                <span>Download PDF</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Overview Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="text-center">
+              <CircularProgress score={score} />
+              <h3 className="text-lg font-semibold text-gray-900 mt-2">
+                Accessibility Score
+              </h3>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="text-center">
+              <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}>
+                {compliant ? (
+                  <CheckCircle className="w-12 h-12 mx-auto" />
+                ) : (
+                  <XCircle className="w-12 h-12 mx-auto" />
+                )}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                WCAG Compliance
+              </h3>
+              <Badge variant={compliant ? 'success' : 'error'}>
+                {compliant ? 'Compliant' : 'Non-compliant'}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-red-600 mb-2">
+                {totalIssues}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Issues Found
+              </h3>
+              <p className="text-sm text-gray-600">
+                Requiring attention
+              </p>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">
+                {totalPassed}
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Tests Passed
+              </h3>
+              <p className="text-sm text-gray-600">
+                Working correctly
+              </p>
             </div>
           </div>
         </div>
@@ -349,69 +391,82 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
         <div className="space-y-8">
           {Object.entries(categorized).map(([catKey, issues]) =>
             issues.length > 0 && (
-              <div key={catKey}>
-                <h2 className="text-lg font-bold mb-2 text-gray-900">
-                  {CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}
-                </h2>
-                <div className="space-y-4">
+              <div key={catKey} className="bg-white rounded-lg shadow-sm">
+                <div className="p-6 border-b">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                    {catKey === 'screenreader' && <AlertTriangle className="w-6 h-6 text-red-600" />}
+                    {catKey === 'visual' && <AlertTriangle className="w-6 h-6 text-orange-600" />}
+                    {catKey === 'navigation' && <AlertTriangle className="w-6 h-6 text-yellow-600" />}
+                    {catKey === 'content' && <AlertTriangle className="w-6 h-6 text-blue-600" />}
+                    <span>{CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}</span>
+                  </h2>
+                </div>
+                <div className="divide-y">
                   {issues.map((result, index) => (
-                    <div
-                      key={`${result.type}-${index}`}
-                      className={`bg-white rounded-lg shadow-sm overflow-hidden border border-red-200`}
-                    >
-                      <div className="p-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-2">
-                              <Badge
-                                variant={result.severity === 'critical' ? 'error' : result.severity === 'serious' ? 'warning' : 'info'}
-                              >
-                                {result.severity === 'critical' ? 'Critical' : result.severity === 'serious' ? 'Serious' : 'Moderate'}
-                              </Badge>
-                              <span className="text-sm text-gray-500">
-                                {result.type === 'pa11y' ? 'Pa11y' : 'Axe'}
-                              </span>
-                            </div>
-                            <h3 className="mt-2 text-sm font-medium text-gray-900">
-                              {result.message}
-                            </h3>
-                            {result.context && (
-                              <div className="mt-2">
-                                <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto text-gray-800" style={{ color: '#1F2937' }}>
-                                  {result.context}
-                                </pre>
-                              </div>
-                            )}
-                            {result.help && (
-                              <p className="mt-2 text-sm text-gray-600">
-                                {result.help}
-                              </p>
-                            )}
+                    <div key={`${result.type}-${index}`} className="p-6">
+                      <div className="flex flex-col lg:flex-row lg:space-x-6">
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-3">
+                            <Badge
+                              variant={result.severity === 'critical' ? 'error' : result.severity === 'serious' ? 'warning' : 'info'}
+                            >
+                              {result.severity === 'critical' ? 'Critical' : result.severity === 'serious' ? 'Serious' : 'Moderate'}
+                            </Badge>
                             {result.helpUrl && (
                               <a
                                 href={result.helpUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="mt-2 text-sm text-blue-600 hover:text-blue-800 inline-flex items-center"
+                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
                               >
-                                Learn more
-                                <ExternalLink className="h-4 w-4 ml-1" />
+                                <span>Learn more</span>
+                                <ExternalLink className="w-4 h-4" />
                               </a>
                             )}
                           </div>
-                          {result.screenshot && (
-                            <button
-                              onClick={() => setSelectedIssue(result)}
-                              className="ml-4 flex-shrink-0"
-                            >
+                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                            {result.message}
+                          </h3>
+                          <div className="space-y-2 text-sm text-gray-600">
+                            {result.selector && (
+                              <p>
+                                <strong>Element:</strong>{' '}
+                                <code className="bg-gray-100 px-2 py-1 rounded text-gray-800">
+                                  {result.selector}
+                                </code>
+                              </p>
+                            )}
+                            {result.code && (
+                              <p><strong>Code:</strong> {result.code}</p>
+                            )}
+                            {result.context && (
+                              <div>
+                                <strong>Context:</strong>
+                                <pre className="bg-gray-100 p-2 rounded mt-1 overflow-x-auto text-xs text-gray-800">
+                                  {result.context}
+                                </pre>
+                              </div>
+                            )}
+                            {result.help && (
+                              <p className="mt-2">{result.help}</p>
+                            )}
+                          </div>
+                        </div>
+                        {result.screenshot && (
+                          <div className="mt-4 lg:mt-0 lg:flex-shrink-0">
+                            <div className="relative">
                               <img
                                 src={result.screenshot}
                                 alt="Issue screenshot"
-                                className="h-20 w-20 object-cover rounded border border-gray-200 hover:border-blue-500 transition-colors"
+                                className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => setSelectedIssue(result)}
                               />
-                            </button>
-                          )}
-                        </div>
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <Eye className="w-8 h-8 text-white bg-black bg-opacity-50 rounded-full p-1" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -419,99 +474,90 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
               </div>
             )
           )}
-        </div>
 
-        {/* Screenshot modal */}
-        {selectedIssue && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-            <div className="bg-white rounded-lg max-w-4xl w-full p-4">
-              <div className="flex justify-between items-start mb-4">
-                <h3 className="text-lg font-medium text-gray-900">
-                  {selectedIssue.message}
-                </h3>
-                <button
-                  onClick={() => setSelectedIssue(null)}
-                  className="text-gray-400 hover:text-gray-500"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-              <img
-                src={selectedIssue.screenshot}
-                alt="Issue screenshot"
-                className="w-full rounded-lg"
-              />
+          {/* No Issues Found */}
+          {activeTab === 'issues' && failingResults.length === 0 && (
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                No Critical Issues Found
+              </h2>
+              <p className="text-gray-600 max-w-md mx-auto">
+                Congratulations! Your website passed all accessibility tests. 
+                However, manual testing is still recommended for comprehensive coverage.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Screenshot Modal */}
+      {selectedIssue && (
+        <Modal
+          isOpen={!!selectedIssue}
+          onClose={() => setSelectedIssue(null)}
+          title="Issue Screenshot"
+          size="lg"
+        >
+          <div className="p-4">
+            <img
+              src={selectedIssue.screenshot}
+              alt="Enlarged screenshot"
+              className="w-full h-auto rounded-lg"
+            />
+          </div>
+        </Modal>
+      )}
+
+      {/* Email Modal */}
+      {showModal && modalType === 'email' && (
+        <Modal
+          isOpen={showModal}
+          onClose={() => setShowModal(false)}
+          title="Send Report via Email"
+        >
+          <div className="p-4">
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email address
+            </label>
+            <input
+              type="email"
+              id="email"
+              value={emailAddress}
+              onChange={(e) => setEmailAddress(e.target.value)}
+              className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Enter email address"
+            />
+            {error && (
+              <p className="mt-2 text-sm text-red-600">{error}</p>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={async () => {
+                  if (!emailAddress) {
+                    setError('Please enter an email address');
+                    return;
+                  }
+                  setIsSending(true);
+                  setError(null);
+                  try {
+                    await onSendEmail(emailAddress);
+                    setShowModal(false);
+                  } catch (err) {
+                    setError(err.message || 'Failed to send email');
+                  } finally {
+                    setIsSending(false);
+                  }
+                }}
+                disabled={isSending}
+                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+              >
+                {isSending ? 'Sending...' : 'Send Report'}
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Action modals */}
-        {showModal && (
-          <Modal
-            onClose={() => setShowModal(false)}
-          >
-            {modalType === 'pdf' ? (
-              <div className="mt-4">
-                <p className="text-sm text-gray-500">
-                  The PDF report will include all test results, screenshots, and recommendations.
-                </p>
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={() => {
-                      onDownloadPdf();
-                      setShowModal(false);
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    Download PDF
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mt-4">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email address
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={emailAddress}
-                  onChange={(e) => setEmailAddress(e.target.value)}
-                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  placeholder="Enter email address"
-                />
-                {error && (
-                  <p className="mt-2 text-sm text-red-600">{error}</p>
-                )}
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={async () => {
-                      if (!emailAddress) {
-                        setError('Please enter an email address');
-                        return;
-                      }
-                      setIsSending(true);
-                      setError(null);
-                      try {
-                        await onSendEmail(emailAddress);
-                        setShowModal(false);
-                      } catch (err) {
-                        setError(err.message || 'Failed to send email');
-                      } finally {
-                        setIsSending(false);
-                      }
-                    }}
-                    disabled={isSending}
-                    className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {isSending ? 'Sending...' : 'Send Report'}
-                  </button>
-                </div>
-              </div>
-            )}
-          </Modal>
-        )}
-      </div>
+        </Modal>
+      )}
     </div>
   );
 } 
