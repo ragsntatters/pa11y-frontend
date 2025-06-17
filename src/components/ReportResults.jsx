@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Download, Mail, ExternalLink, AlertTriangle, CheckCircle, XCircle, Info, Eye, Calendar, Globe } from 'lucide-react';
+import { Download, Mail, ExternalLink, AlertTriangle, CheckCircle, XCircle, Info, Eye, Calendar, Globe, ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 
@@ -12,6 +12,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState(null);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState({});
 
   if (!report) return null;
 
@@ -34,6 +35,13 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const handleSendEmail = async () => {
     setModalType('email');
     setShowModal(true);
+  };
+
+  const toggleCategory = (categoryKey) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryKey]: !prev[categoryKey]
+    }));
   };
 
   const getScoreColor = (score) => {
@@ -180,7 +188,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
     });
   }, [report]);
 
-  // Filter results based on active tab (no 'all' tab)
+  // Filter results based on active tab
   const filteredResults = useMemo(() => {
     if (activeTab === 'passed') return allResults.filter(r => r.passed);
     return allResults.filter(r => !r.passed);
@@ -392,85 +400,100 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
           {Object.entries(categorized).map(([catKey, issues]) =>
             issues.length > 0 && (
               <div key={catKey} className="bg-white rounded-lg shadow-sm">
-                <div className="p-6 border-b">
-                  <h2 className="text-xl font-bold text-gray-900 flex items-center space-x-2">
+                <button
+                  onClick={() => toggleCategory(catKey)}
+                  className="w-full p-6 border-b flex items-center justify-between hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center space-x-2">
                     {catKey === 'screenreader' && <AlertTriangle className="w-6 h-6 text-red-600" />}
                     {catKey === 'visual' && <AlertTriangle className="w-6 h-6 text-orange-600" />}
                     {catKey === 'navigation' && <AlertTriangle className="w-6 h-6 text-yellow-600" />}
                     {catKey === 'content' && <AlertTriangle className="w-6 h-6 text-blue-600" />}
-                    <span>{CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}</span>
-                  </h2>
-                </div>
-                <div className="divide-y">
-                  {issues.map((result, index) => (
-                    <div key={`${result.type}-${index}`} className="p-6">
-                      <div className="flex flex-col lg:flex-row lg:space-x-6">
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-3">
-                            <Badge
-                              variant={result.severity === 'critical' ? 'error' : result.severity === 'serious' ? 'warning' : 'info'}
-                            >
-                              {result.severity === 'critical' ? 'Critical' : result.severity === 'serious' ? 'Serious' : 'Moderate'}
-                            </Badge>
-                            {result.helpUrl && (
-                              <a
-                                href={result.helpUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                    <h2 className="text-xl font-bold text-gray-900">
+                      {CATEGORY_MAP.find(c => c.key === catKey)?.label || 'Other Accessibility Issues'}
+                    </h2>
+                    <Badge variant="neutral" className="ml-2">
+                      {issues.length}
+                    </Badge>
+                  </div>
+                  {expandedCategories[catKey] ? (
+                    <ChevronDown className="w-5 h-5 text-gray-500" />
+                  ) : (
+                    <ChevronRight className="w-5 h-5 text-gray-500" />
+                  )}
+                </button>
+                {expandedCategories[catKey] && (
+                  <div className="divide-y">
+                    {issues.map((result, index) => (
+                      <div key={`${result.type}-${index}`} className="p-6">
+                        <div className="flex flex-col lg:flex-row lg:space-x-6">
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between mb-3">
+                              <Badge
+                                variant={result.severity === 'critical' ? 'error' : result.severity === 'serious' ? 'warning' : 'info'}
                               >
-                                <span>Learn more</span>
-                                <ExternalLink className="w-4 h-4" />
-                              </a>
-                            )}
-                          </div>
-                          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                            {result.message}
-                          </h3>
-                          <div className="space-y-2 text-sm text-gray-600">
-                            {result.selector && (
-                              <p>
-                                <strong>Element:</strong>{' '}
-                                <code className="bg-gray-100 px-2 py-1 rounded text-gray-800">
-                                  {result.selector}
-                                </code>
-                              </p>
-                            )}
-                            {result.code && (
-                              <p><strong>Code:</strong> {result.code}</p>
-                            )}
-                            {result.context && (
-                              <div>
-                                <strong>Context:</strong>
-                                <pre className="bg-gray-100 p-2 rounded mt-1 overflow-x-auto text-xs text-gray-800">
-                                  {result.context}
-                                </pre>
-                              </div>
-                            )}
-                            {result.help && (
-                              <p className="mt-2">{result.help}</p>
-                            )}
-                          </div>
-                        </div>
-                        {result.screenshot && (
-                          <div className="mt-4 lg:mt-0 lg:flex-shrink-0">
-                            <div className="relative">
-                              <img
-                                src={result.screenshot}
-                                alt="Issue screenshot"
-                                className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                                onClick={() => setSelectedIssue(result)}
-                              />
-                              <div className="absolute inset-0 flex items-center justify-center">
-                                <Eye className="w-8 h-8 text-white bg-black bg-opacity-50 rounded-full p-1" />
-                              </div>
+                                {result.severity === 'critical' ? 'Critical' : result.severity === 'serious' ? 'Serious' : 'Moderate'}
+                              </Badge>
+                              {result.helpUrl && (
+                                <a
+                                  href={result.helpUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="flex items-center space-x-1 text-blue-600 hover:text-blue-800 text-sm"
+                                >
+                                  <span>Learn more</span>
+                                  <ExternalLink className="w-4 h-4" />
+                                </a>
+                              )}
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              {result.message}
+                            </h3>
+                            <div className="space-y-2 text-sm text-gray-600">
+                              {result.selector && (
+                                <p>
+                                  <strong>Element:</strong>{' '}
+                                  <code className="bg-gray-100 px-2 py-1 rounded text-gray-800">
+                                    {result.selector}
+                                  </code>
+                                </p>
+                              )}
+                              {result.code && (
+                                <p><strong>Code:</strong> {result.code}</p>
+                              )}
+                              {result.context && (
+                                <div>
+                                  <strong>Context:</strong>
+                                  <pre className="bg-gray-100 p-2 rounded mt-1 overflow-x-auto text-xs text-gray-800">
+                                    {result.context}
+                                  </pre>
+                                </div>
+                              )}
+                              {result.help && (
+                                <p className="mt-2">{result.help}</p>
+                              )}
                             </div>
                           </div>
-                        )}
+                          {result.screenshot && (
+                            <div className="mt-4 lg:mt-0 lg:flex-shrink-0">
+                              <div className="relative">
+                                <img
+                                  src={result.screenshot}
+                                  alt="Issue screenshot"
+                                  className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                                  onClick={() => setSelectedIssue(result)}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <Eye className="w-8 h-8 text-white bg-black bg-opacity-50 rounded-full p-1" />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )
           )}
