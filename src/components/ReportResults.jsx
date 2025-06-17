@@ -13,6 +13,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const [error, setError] = useState(null);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
+  const [showCloudflareModal, setShowCloudflareModal] = useState(false);
 
   if (!report) return null;
 
@@ -309,6 +310,17 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
         </div>
       </header>
 
+      {report?.pa11y?.error && report.pa11y.error.includes('Cloudflare protection detected') && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
+          <div className="flex items-center justify-between">
+            <span>
+              <strong>Cloudflare Protection Detected:</strong> This website is protected by Cloudflare, which may block automated accessibility scans.<br/>
+              If you control this website, <button className="underline text-blue-700 hover:text-blue-900" onClick={() => setShowCloudflareModal(true)}>click here for instructions on whitelisting our scanner</button>.
+            </span>
+          </div>
+        </div>
+      )}
+
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Overview Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -587,6 +599,27 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                 {isSending ? 'Sending...' : 'Send Report'}
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Cloudflare Modal */}
+      {showCloudflareModal && (
+        <Modal isOpen={showCloudflareModal} onClose={() => setShowCloudflareModal(false)} title="Allow Accessibility Scans through Cloudflare">
+          <div className="p-4 space-y-4">
+            <h2 className="text-lg font-bold">How to Allow Accessibility Scans</h2>
+            <p>
+              Our scanner runs on <strong>Google Cloud Platform (GCP)</strong> via Railway. Cloudflare may block automated scans unless you whitelist the GCP IP range.
+            </p>
+            <ol className="list-decimal ml-6 space-y-2">
+              <li>Go to your <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Cloudflare dashboard</a>.</li>
+              <li>Add a firewall rule to <strong>allow</strong> all traffic from the <a href="https://cloud.google.com/compute/docs/faq#find_ip_range" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">GCP IP ranges</a>.</li>
+              <li>Save and deploy the rule.</li>
+            </ol>
+            <p>
+              For more details, see <a href="https://developers.cloudflare.com/firewall/cf-firewall-rules/actions/allow/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Cloudflare: How to whitelist IPs</a>.
+            </p>
+            <p className="text-xs text-gray-500">If you need help, contact your site administrator or Cloudflare support.</p>
           </div>
         </Modal>
       )}
