@@ -373,23 +373,23 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
             <nav className="-mb-px flex">
               <button
                 onClick={() => setActiveTab('issues')}
-                className={`${
+                className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center gap-1 ${
                   activeTab === 'issues'
                     ? 'border-red-500 text-red-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
+                }`}
               >
-                Issues ({failingResults.length})
+                Issues <span className={activeTab === 'issues' ? 'text-red-600' : 'text-gray-500'}>({failingResults.length})</span>
               </button>
               <button
                 onClick={() => setActiveTab('passed')}
-                className={`${
+                className={`whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm flex items-center gap-1 ${
                   activeTab === 'passed'
                     ? 'border-green-500 text-green-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } whitespace-nowrap py-4 px-6 border-b-2 font-medium text-sm`}
+                }`}
               >
-                Passed ({passedResults.length})
+                Passed <span className={activeTab === 'passed' ? 'text-green-600' : 'text-gray-500'}>({passedResults.length})</span>
               </button>
             </nav>
           </div>
@@ -475,18 +475,26 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                             </div>
                           </div>
                           {result.screenshot && (
-                            <div className="mt-4 lg:mt-0 lg:flex-shrink-0">
-                              <div className="relative">
-                                <img
-                                  src={result.screenshot}
-                                  alt="Issue screenshot"
-                                  className="w-32 h-32 object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
-                                  onClick={() => setSelectedIssue(result)}
-                                />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                  <Eye className="w-8 h-8 text-white bg-black bg-opacity-50 rounded-full p-1" />
+                            <div className="mt-4 lg:mt-0 lg:flex-shrink-0 flex items-center justify-center">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedIssue(result)}
+                                className="focus:outline-none"
+                                style={{ maxWidth: '128px', maxHeight: '128px', display: 'block' }}
+                                aria-label="View screenshot"
+                              >
+                                <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-gray-200 hover:border-blue-500 transition-colors bg-white flex items-center justify-center">
+                                  <img
+                                    src={result.screenshot}
+                                    alt="Issue screenshot"
+                                    className="object-contain w-full h-full cursor-pointer"
+                                    style={{ maxWidth: '128px', maxHeight: '128px' }}
+                                  />
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                    <Eye className="w-8 h-8 text-white bg-black bg-opacity-50 rounded-full p-1" />
+                                  </div>
                                 </div>
-                              </div>
+                              </button>
                             </div>
                           )}
                         </div>
