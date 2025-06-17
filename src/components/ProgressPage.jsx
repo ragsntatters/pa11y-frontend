@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Modal } from './ui/Modal';
 
 export default function ProgressPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState('pending');
   const [error, setError] = useState(null);
+  const [showCloudflareModal, setShowCloudflareModal] = useState(false);
 
   useEffect(() => {
     let interval;
@@ -41,7 +43,33 @@ export default function ProgressPage() {
             <p className="text-orange-400">Your report is being generated. This may take up to a minute.</p>
           </>
         )}
-        {status === 'error' && (
+        {status === 'error' && error && error.includes('Cloudflare protection detected') ? (
+          <>
+            <p className="text-yellow-400 mt-4">
+              <strong>Cloudflare Protection Detected:</strong> This website is protected by Cloudflare, which may block automated accessibility scans.<br/>
+              If you control this website, <button className="underline text-blue-300 hover:text-blue-100" onClick={() => setShowCloudflareModal(true)}>click here for instructions on whitelisting our scanner</button>.
+            </p>
+            {showCloudflareModal && (
+              <Modal isOpen={showCloudflareModal} onClose={() => setShowCloudflareModal(false)} title="Allow Accessibility Scans through Cloudflare">
+                <div className="p-4 space-y-4">
+                  <h2 className="text-lg font-bold">How to Allow Accessibility Scans</h2>
+                  <p>
+                    Our scanner runs on <strong>Google Cloud Platform (GCP)</strong> via Railway. Cloudflare may block automated scans unless you whitelist the GCP IP range.
+                  </p>
+                  <ol className="list-decimal ml-6 space-y-2">
+                    <li>Go to your <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Cloudflare dashboard</a>.</li>
+                    <li>Add a firewall rule to <strong>allow</strong> all traffic from the <a href="https://cloud.google.com/compute/docs/faq#find_ip_range" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">GCP IP ranges</a>.</li>
+                    <li>Save and deploy the rule.</li>
+                  </ol>
+                  <p>
+                    For more details, see <a href="https://developers.cloudflare.com/firewall/cf-firewall-rules/actions/allow/" target="_blank" rel="noopener noreferrer" className="underline text-blue-700">Cloudflare: How to whitelist IPs</a>.
+                  </p>
+                  <p className="text-xs text-gray-500">If you need help, contact your site administrator or Cloudflare support.</p>
+                </div>
+              </Modal>
+            )}
+          </>
+        ) : status === 'error' && (
           <p className="text-red-500 mt-4">{error || 'An error occurred while running the scan.'}</p>
         )}
       </div>
