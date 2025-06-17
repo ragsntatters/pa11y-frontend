@@ -464,7 +464,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                               {result.context && (
                                 <div>
                                   <strong>Context:</strong>
-                                  <pre className="bg-gray-100 p-2 rounded mt-1 overflow-x-auto text-xs text-gray-800">
+                                  <pre className="bg-gray-100 p-2 rounded mt-1 text-xs text-gray-800 whitespace-pre-wrap break-words max-w-full overflow-x-auto">
                                     {result.context}
                                   </pre>
                                 </div>
