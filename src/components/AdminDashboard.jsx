@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Badge } from './ui/Badge';
 import { Modal } from './ui/Modal';
 import { useAuth } from '@clerk/clerk-react';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard({ onLogout }) {
   const [reports, setReports] = useState([]);
@@ -17,6 +18,7 @@ export default function AdminDashboard({ onLogout }) {
   const [deleteError, setDeleteError] = useState(null);
   const [scanWcagLevel, setScanWcagLevel] = useState('AA');
   const { getToken } = useAuth();
+  const navigate = useNavigate();
 
   const frontendUrl = "https://pa11y.wookongmarketing.com/";
   const embedCode = `<iframe\n  src=\"${frontendUrl}\"\n  width=\"${embedWidth}\"\n  height=\"${embedHeight}\"\n  style=\"border:none; border-radius:12px; box-shadow:0 2px 8px rgba(0,0,0,0.1);\"\n  title=\"Accessibility Scan\"\n  allowtransparency=\"true\"\n></iframe>`;
@@ -28,6 +30,7 @@ export default function AdminDashboard({ onLogout }) {
 
   const fetchReports = async () => {
     try {
+      setError(null);
       const token = await getToken();
       const res = await fetch('/api/reports', {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -66,6 +69,8 @@ export default function AdminDashboard({ onLogout }) {
       setScanEmail('');
       setScanWcagLevel('AA');
       fetchReports();
+      // Redirect to progress page after scan starts
+      navigate(`/progress/${data.reportId}`);
     } catch (err) {
       setScanError(err.message);
     } finally {
@@ -191,16 +196,19 @@ export default function AdminDashboard({ onLogout }) {
           </button>
         </form>
         {scanError && <div className="text-red-500 mt-2">{scanError}</div>}
-        {scanReportId && (
-          <div className="text-green-600 mt-2">
-            Scan started! <a href={`/progress/${scanReportId}`} className="underline">View progress</a>
-          </div>
-        )}
       </div>
       {deleteError && <div className="text-red-500 mb-2">{deleteError}</div>}
-      {reports.length === 0 ? (
-        <div className="text-center text-blue-400">No reports found</div>
-      ) : (
+      {error && (
+        <div className="text-center text-red-500 mb-4">
+          {error} <button onClick={fetchReports} className="underline ml-2">Refresh</button>
+        </div>
+      )}
+      {reports.length === 0 && !error ? (
+        <div className="text-center text-blue-400">
+          No reports found <button onClick={fetchReports} className="underline ml-2">Refresh</button>
+        </div>
+      ) : null}
+      {reports.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full border border-blue-300 text-sm">
             <thead>
