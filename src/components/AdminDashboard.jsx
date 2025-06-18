@@ -167,7 +167,13 @@ export default function AdminDashboard({ onLogout }) {
             type="url"
             placeholder="Website URL"
             value={scanUrl}
-            onChange={e => setScanUrl(e.target.value)}
+            onChange={e => {
+              let val = e.target.value.trim();
+              if (val && !/^https?:\/\//i.test(val)) {
+                val = 'https://' + val;
+              }
+              setScanUrl(val);
+            }}
             required
             className="bg-blue-50 border border-blue-300 rounded-lg px-4 py-2 text-black"
           />
