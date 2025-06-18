@@ -262,9 +262,9 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:space-x-8">
-            {/* Screenshot on the left */}
+            {/* Screenshot on the left (desktop), above grid (mobile) */}
             {report.pageScreenshot && (
-              <div className="mb-6 lg:mb-0 flex-shrink-0 flex justify-center items-center">
+              <div className="mb-6 lg:mb-0 flex-shrink-0 flex justify-center items-center w-full lg:w-auto">
                 <button
                   type="button"
                   className="focus:outline-none"
@@ -274,15 +274,15 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                   <img
                     src={report.pageScreenshot}
                     alt="Page screenshot"
-                    className="rounded-lg shadow-lg max-w-xs w-full h-auto border border-gray-200 hover:opacity-90 transition"
+                    className="rounded-lg shadow-lg w-full max-w-xs h-auto border border-gray-200 hover:opacity-90 transition"
                     style={{ maxHeight: '260px', objectFit: 'contain' }}
                   />
                 </button>
               </div>
             )}
-            {/* 2x2 grid of summary tiles on the right */}
-            <div className="flex-1">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+            {/* 2x2 grid of summary tiles on the right, always 2 columns */}
+            <div className="flex-1 w-full">
+              <div className="grid grid-cols-2 gap-6 mb-4">
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <div className="text-center">
                     <CircularProgress score={score} />
@@ -293,7 +293,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                 </div>
                 <div className="bg-white rounded-lg p-6 shadow-sm">
                   <div className="text-center">
-                    <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}>
+                    <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}> 
                       {compliant ? (
                         <CheckCircle className="w-12 h-12 mx-auto" />
                       ) : (
