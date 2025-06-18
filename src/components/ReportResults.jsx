@@ -14,6 +14,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [showCloudflareModal, setShowCloudflareModal] = useState(false);
+  const [showScreenshotModal, setShowScreenshotModal] = useState(false);
 
   if (!report) return null;
 
@@ -260,11 +261,81 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
       {/* Header */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Accessibility Report
-              </h1>
+          <div className="flex flex-col lg:flex-row lg:items-start lg:space-x-8">
+            {/* Screenshot on the left */}
+            {report.pageScreenshot && (
+              <div className="mb-6 lg:mb-0 flex-shrink-0 flex justify-center items-center">
+                <button
+                  type="button"
+                  className="focus:outline-none"
+                  onClick={() => setShowScreenshotModal(true)}
+                  aria-label="View full screenshot"
+                >
+                  <img
+                    src={report.pageScreenshot}
+                    alt="Page screenshot"
+                    className="rounded-lg shadow-lg max-w-xs w-full h-auto border border-gray-200 hover:opacity-90 transition"
+                    style={{ maxHeight: '260px', objectFit: 'contain' }}
+                  />
+                </button>
+              </div>
+            )}
+            {/* 2x2 grid of summary tiles on the right */}
+            <div className="flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-4">
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <CircularProgress score={score} />
+                    <h3 className="text-lg font-semibold text-gray-900 mt-2">
+                      Accessibility Score
+                    </h3>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}>
+                      {compliant ? (
+                        <CheckCircle className="w-12 h-12 mx-auto" />
+                      ) : (
+                        <XCircle className="w-12 h-12 mx-auto" />
+                      )}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      WCAG Compliance
+                    </h3>
+                    <Badge variant={compliant ? 'success' : 'error'}>
+                      {compliant ? 'Compliant' : 'Non-compliant'}
+                    </Badge>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-red-600 mb-2">
+                      {totalIssues}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Issues Found
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Requiring attention
+                    </p>
+                  </div>
+                </div>
+                <div className="bg-white rounded-lg p-6 shadow-sm">
+                  <div className="text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-2">
+                      {totalPassed}
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Tests Passed
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      Working correctly
+                    </p>
+                  </div>
+                </div>
+              </div>
+              {/* Report meta info */}
               <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
                 <div className="flex items-center space-x-1">
                   <Globe className="w-4 h-4" />
@@ -279,35 +350,21 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                 </div>
               </div>
             </div>
-            <div className="flex space-x-3 mt-4 sm:mt-0">
-              <button
-                onClick={handleSendEmail}
-                disabled={isSending}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-md transition-colors disabled:opacity-50
-                  ${isSending ? 'bg-gray-300 text-gray-700' : 'bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-300'}`}
-              >
-                {isSending ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600" />
-                ) : (
-                  <Mail className="w-4 h-4" />
-                )}
-                <span>Email Report</span>
-              </button>
-              <button
-                onClick={handleDownloadPdf}
-                disabled={isPdfGenerating}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50"
-              >
-                {isPdfGenerating ? (
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
-                ) : (
-                  <Download className="w-4 h-4" />
-                )}
-                <span>Download PDF</span>
-              </button>
-            </div>
           </div>
         </div>
+        {/* Screenshot Modal */}
+        {showScreenshotModal && report.pageScreenshot && (
+          <Modal isOpen={showScreenshotModal} onClose={() => setShowScreenshotModal(false)} title="Page Screenshot" size="lg">
+            <div className="p-4 flex justify-center items-center">
+              <img
+                src={report.pageScreenshot}
+                alt="Full page screenshot"
+                className="rounded-lg shadow-lg max-w-full h-auto border border-gray-200"
+                style={{ maxHeight: '80vh', objectFit: 'contain' }}
+              />
+            </div>
+          </Modal>
+        )}
       </header>
 
       {report?.pa11y?.error && report.pa11y.error.includes('Cloudflare protection detected') && (
@@ -322,64 +379,6 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
       )}
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Overview Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="text-center">
-              <CircularProgress score={score} />
-              <h3 className="text-lg font-semibold text-gray-900 mt-2">
-                Accessibility Score
-              </h3>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="text-center">
-              <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}>
-                {compliant ? (
-                  <CheckCircle className="w-12 h-12 mx-auto" />
-                ) : (
-                  <XCircle className="w-12 h-12 mx-auto" />
-                )}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                WCAG Compliance
-              </h3>
-              <Badge variant={compliant ? 'success' : 'error'}>
-                {compliant ? 'Compliant' : 'Non-compliant'}
-              </Badge>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-red-600 mb-2">
-                {totalIssues}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Issues Found
-              </h3>
-              <p className="text-sm text-gray-600">
-                Requiring attention
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">
-                {totalPassed}
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                Tests Passed
-              </h3>
-              <p className="text-sm text-gray-600">
-                Working correctly
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Tabs */}
         <div className="bg-white rounded-lg shadow-sm mb-6">
           <div className="border-b border-gray-200">
