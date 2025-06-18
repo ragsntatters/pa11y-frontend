@@ -258,7 +258,41 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Top Bar/Header */}
+      <div className="bg-white border-b shadow-sm sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-center gap-2">
+            <h1 className="text-2xl font-bold text-gray-900 mr-4">Accessibility Report</h1>
+            <div className="flex items-center space-x-3 text-sm text-gray-600">
+              <div className="flex items-center space-x-1">
+                <Globe className="w-4 h-4" />
+                <span className="truncate max-w-xs" title={report.url}>{report.url}</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <Calendar className="w-4 h-4" />
+                <span>{new Date(report.createdAt).toLocaleDateString()}</span>
+              </div>
+              <Badge variant="info">WCAG {wcagLevel}</Badge>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleSendEmail}
+              className="flex items-center gap-2 border border-blue-500 text-blue-600 hover:bg-blue-50 font-semibold py-2 px-4 rounded-lg transition"
+            >
+              <Mail className="w-5 h-5" /> Email Report
+            </button>
+            <button
+              onClick={handleDownloadPdf}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition"
+              disabled={isPdfGenerating}
+            >
+              <Download className="w-5 h-5" /> Download PDF
+            </button>
+          </div>
+        </div>
+      </div>
+      {/* Header with screenshot and summary grid */}
       <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col lg:flex-row lg:items-start lg:space-x-8">
@@ -283,16 +317,16 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
             {/* 2x2 grid of summary tiles on the right, always 2 columns */}
             <div className="flex-1 w-full">
               <div className="grid grid-cols-2 gap-6 mb-4">
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div className="flex flex-col items-center justify-center h-full">
                     <CircularProgress score={score} />
-                    <h3 className="text-lg font-semibold text-gray-900 mt-2">
+                    <h3 className="text-lg font-semibold text-gray-900 mt-2 text-center">
                       Accessibility Score
                     </h3>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div className="flex flex-col items-center justify-center h-full">
                     <div className={`text-3xl font-bold mb-2 ${compliant ? 'text-green-600' : 'text-red-600'}`}> 
                       {compliant ? (
                         <CheckCircle className="w-12 h-12 mx-auto" />
@@ -300,7 +334,7 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                         <XCircle className="w-12 h-12 mx-auto" />
                       )}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-gray-900 text-center">
                       WCAG Compliance
                     </h3>
                     <Badge variant={compliant ? 'success' : 'error'}>
@@ -308,28 +342,28 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
                     </Badge>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div className="flex flex-col items-center justify-center h-full">
                     <div className="text-3xl font-bold text-red-600 mb-2">
                       {totalIssues}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-gray-900 text-center">
                       Issues Found
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 text-center">
                       Requiring attention
                     </p>
                   </div>
                 </div>
-                <div className="bg-white rounded-lg p-6 shadow-sm">
-                  <div className="text-center">
+                <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
+                  <div className="flex flex-col items-center justify-center h-full">
                     <div className="text-3xl font-bold text-green-600 mb-2">
                       {totalPassed}
                     </div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-gray-900 text-center">
                       Tests Passed
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 text-center">
                       Working correctly
                     </p>
                   </div>
