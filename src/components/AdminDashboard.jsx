@@ -120,48 +120,55 @@ export default function AdminDashboard({ onLogout }) {
       </div>
       {showEmbed && (
         <Modal open={showEmbed} onClose={() => setShowEmbed(false)}>
-          <h2 className="text-lg font-bold mb-2">Embed This Form</h2>
-          <label className="block mb-2">
-            Width:
-            <input
-              type="number"
-              value={embedWidth}
-              onChange={e => setEmbedWidth(e.target.value)}
-              className="ml-2 border px-2 py-1 rounded w-20"
+          <div className="p-6">
+            <h2 className="text-lg font-bold mb-4">Embed This Form</h2>
+            <div className="flex items-center gap-4 mb-4">
+              <label className="flex items-center gap-2">
+                Width:
+                <input
+                  type="number"
+                  value={embedWidth}
+                  onChange={e => setEmbedWidth(e.target.value)}
+                  className="border px-2 py-1 rounded w-24"
+                />
+              </label>
+              <label className="flex items-center gap-2">
+                Height:
+                <input
+                  type="number"
+                  value={embedHeight}
+                  onChange={e => setEmbedHeight(e.target.value)}
+                  className="border px-2 py-1 rounded w-24"
+                />
+              </label>
+            </div>
+            <textarea
+              readOnly
+              value={embedCode}
+              className="w-full h-32 border rounded p-2 font-mono mb-4 text-sm bg-gray-50"
+              rows="5"
             />
-          </label>
-          <label className="block mb-2">
-            Height:
-            <input
-              type="number"
-              value={embedHeight}
-              onChange={e => setEmbedHeight(e.target.value)}
-              className="ml-2 border px-2 py-1 rounded w-20"
-            />
-          </label>
-          <textarea
-            readOnly
-            value={embedCode}
-            className="w-full h-32 border rounded p-2 font-mono mb-2"
-          />
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(embedCode);
-            }}
-            className="bg-green-500 hover:bg-green-600 text-white font-semibold py-1 px-4 rounded mr-2"
-          >
-            Copy to Clipboard
-          </button>
-          <button
-            onClick={() => setShowEmbed(false)}
-            className="bg-gray-300 hover:bg-gray-400 text-black font-semibold py-1 px-4 rounded"
-          >
-            Close
-          </button>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(embedCode);
+                }}
+                className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg"
+              >
+                Copy to Clipboard
+              </button>
+              <button
+                onClick={() => setShowEmbed(false)}
+                className="bg-gray-300 hover:bg-gray-400 text-black font-semibold py-2 px-4 rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
       <div className="mb-8 max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg">
-        <h2 className="text-xl font-bold mb-4 text-blue-600">Run New Admin Scan</h2>
+        <h2 className="text-xl font-bold mb-4 text-blue-600 text-center">Run New Scan</h2>
         <form onSubmit={handleAdminScan} className="flex flex-col gap-3">
           <input
             type="url"
