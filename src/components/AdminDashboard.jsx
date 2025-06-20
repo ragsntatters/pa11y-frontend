@@ -169,7 +169,7 @@ export default function AdminDashboard({ onLogout }) {
       )}
       <div className="mb-8 max-w-xl mx-auto bg-white p-6 rounded-xl shadow-lg">
         <h2 className="text-xl font-bold mb-4 text-blue-600 text-center">Run New Scan</h2>
-        <form onSubmit={handleAdminScan} className="flex flex-col gap-3">
+        <form onSubmit={handleAdminScan} className="space-y-4">
           <input
             type="url"
             placeholder="Website URL"
@@ -182,7 +182,7 @@ export default function AdminDashboard({ onLogout }) {
               setScanUrl(val);
             }}
             required
-            className="bg-blue-50 border border-blue-300 rounded-lg px-4 py-2 text-black"
+            className="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
           />
           <input
             type="email"
@@ -190,22 +190,26 @@ export default function AdminDashboard({ onLogout }) {
             value={scanEmail}
             onChange={e => setScanEmail(e.target.value)}
             required
-            className="bg-blue-50 border border-blue-300 rounded-lg px-4 py-2 text-black"
+            className="w-full border border-blue-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
           />
-          <select
-            value={scanWcagLevel}
-            onChange={e => setScanWcagLevel(e.target.value)}
-            className="bg-blue-50 border border-blue-300 rounded-lg px-4 py-2 text-black"
-          >
-            <option value="AA">WCAG 2.1 AA</option>
-            <option value="AAA">WCAG 2.1 AAA</option>
-          </select>
+          <div>
+            <label htmlFor="wcagLevel" className="block text-sm font-medium text-gray-700 mb-1">WCAG Level</label>
+            <select
+              id="wcagLevel"
+              value={scanWcagLevel}
+              onChange={e => setScanWcagLevel(e.target.value)}
+              className="w-full border border-blue-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 text-black"
+            >
+              <option value="AA">WCAG 2.1 AA</option>
+              <option value="AAA">WCAG 2.1 AAA</option>
+            </select>
+          </div>
           <button
             type="submit"
-            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg transition"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition"
             disabled={scanLoading}
           >
-            {scanLoading ? 'Running Scan...' : 'Run Admin Scan'}
+            {scanLoading ? 'Running Scan...' : 'Run Scan'}
           </button>
         </form>
         {scanError && <div className="text-red-500 mt-2">{scanError}</div>}
