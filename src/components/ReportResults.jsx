@@ -399,7 +399,8 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
         )}
       </header>
 
-      {report?.pa11y?.error && report.pa11y.error.includes('Cloudflare protection detected') && (
+      {((report?.pa11y?.error && report.pa11y.error.includes('Cloudflare protection detected')) || 
+        (report?.result?.error && report.result.error.includes('Cloudflare protection detected'))) && (
         <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-6 rounded">
           <div className="flex items-center justify-between">
             <span>
