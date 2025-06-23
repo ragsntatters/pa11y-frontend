@@ -20,7 +20,8 @@ export default function ProgressPage() {
         if (report.status === 'complete') {
           navigate(`/report/${id}`);
         } else if (report.status === 'error') {
-          setError(report.result?.error || 'Scan failed');
+          const errorMessage = report.result?.error || 'Scan failed';
+          setError(errorMessage);
         }
       } catch (err) {
         setError(err.message);
