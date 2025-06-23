@@ -18,11 +18,86 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
 
   if (!report) return null;
 
-  // Calculate scores and counts
-  const totalIssues = (report.pa11y?.issues?.length || 0) + 
-                     (report.axe?.violations?.reduce((sum, v) => sum + v.nodes.length, 0) || 0);
-  const totalPassed = (report.pa11y?.passed?.length || 0) + 
-                     (report.axe?.passes?.reduce((sum, p) => sum + p.nodes.length, 0) || 0);
+  // Calculate scores and counts using the same filtered data as tabs
+  const allResults = useMemo(() => {
+    const results = [];
+    const wcagLevel = report.wcagLevel || 'AA'; // Default to AA if not specified
+
+    // Add Pa11y issues matching WCAG level
+    (report.pa11y?.issues || []).forEach(issue => {
+      if (matchesWcagLevel({ ...issue, type: 'pa11y' }, wcagLevel)) {
+        results.push({
+          ...issue,
+          type: 'pa11y',
+          severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
+          passed: false
+        });
+      }
+    });
+
+    // Add Axe violations matching WCAG level
+    (report.axe?.violations || []).forEach(violation => {
+      if (matchesWcagLevel({ ...violation, type: 'axe' }, wcagLevel)) {
+        violation.nodes.forEach(node => {
+          results.push({
+            ...violation,
+            ...node,
+            type: 'axe',
+            severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
+            message: violation.description,
+            selector: node.target?.[0],
+            context: node.html,
+            screenshot: node.screenshot,
+            help: violation.help,
+            helpUrl: violation.helpUrl,
+            impact: violation.impact,
+            tags: violation.tags,
+            passed: false
+          });
+        });
+      }
+    });
+
+    // Add Pa11y passed tests matching WCAG level
+    (report.pa11y?.passed || []).forEach(passed => {
+      if (matchesWcagLevel({ ...passed, type: 'pa11y' }, wcagLevel)) {
+        results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
+      }
+    });
+
+    // Add Axe passed tests matching WCAG level
+    (report.axe?.passes || []).forEach(pass => {
+      if (matchesWcagLevel({ ...pass, type: 'axe' }, wcagLevel)) {
+        pass.nodes.forEach(node => {
+          results.push({
+            ...pass,
+            ...node,
+            type: 'axe',
+            severity: 'passed',
+            message: pass.description,
+            selector: node.target?.[0],
+            context: node.html,
+            screenshot: node.screenshot,
+            help: pass.help,
+            helpUrl: pass.helpUrl,
+            impact: 'passed',
+            tags: pass.tags,
+            passed: true
+          });
+        });
+      }
+    });
+
+    // Sort by severity (critical first, then passed tests)
+    return results.sort((a, b) => {
+      const severityOrder = { critical: 0, serious: 1, moderate: 2, passed: 3 };
+      return severityOrder[a.severity] - severityOrder[b.severity];
+    });
+  }, [report]);
+
+  // Calculate scores and counts using the filtered allResults
+  const totalIssues = allResults.filter(r => !r.passed).length;
+  const totalPassed = allResults.filter(r => r.passed).length;
   const totalTests = totalIssues + totalPassed;
   const score = totalTests > 0 ? Math.round((totalPassed / totalTests) * 100) : 0;
   const wcagLevel = report.wcagLevel || 'AA';
@@ -112,83 +187,6 @@ export default function ReportResults({ report, onDownloadPdf, onSendEmail }) {
     }
     return false;
   }
-
-  // Combine and sort all test results based on WCAG level
-  const allResults = useMemo(() => {
-    const results = [];
-    const wcagLevel = report.wcagLevel || 'AA'; // Default to AA if not specified
-
-    // Add Pa11y issues matching WCAG level
-    (report.pa11y?.issues || []).forEach(issue => {
-      if (matchesWcagLevel({ ...issue, type: 'pa11y' }, wcagLevel)) {
-        results.push({
-          ...issue,
-          type: 'pa11y',
-          severity: issue.type === 'error' ? 'critical' : issue.type === 'warning' ? 'serious' : 'moderate',
-          passed: false
-        });
-      }
-    });
-
-    // Add Axe violations matching WCAG level
-    (report.axe?.violations || []).forEach(violation => {
-      if (matchesWcagLevel({ ...violation, type: 'axe' }, wcagLevel)) {
-        violation.nodes.forEach(node => {
-          results.push({
-            ...violation,
-            ...node,
-            type: 'axe',
-            severity: violation.impact === 'critical' ? 'critical' : violation.impact === 'serious' ? 'serious' : 'moderate',
-            message: violation.description,
-            selector: node.target?.[0],
-            context: node.html,
-            screenshot: node.screenshot,
-            help: violation.help,
-            helpUrl: violation.helpUrl,
-            impact: violation.impact,
-            tags: violation.tags,
-            passed: false
-          });
-        });
-      }
-    });
-
-    // Add Pa11y passed tests matching WCAG level
-    (report.pa11y?.passed || []).forEach(passed => {
-      if (matchesWcagLevel({ ...passed, type: 'pa11y' }, wcagLevel)) {
-        results.push({ ...passed, type: 'pa11y', severity: 'passed', passed: true });
-      }
-    });
-
-    // Add Axe passed tests matching WCAG level
-    (report.axe?.passes || []).forEach(pass => {
-      if (matchesWcagLevel({ ...pass, type: 'axe' }, wcagLevel)) {
-        pass.nodes.forEach(node => {
-          results.push({
-            ...pass,
-            ...node,
-            type: 'axe',
-            severity: 'passed',
-            message: pass.description,
-            selector: node.target?.[0],
-            context: node.html,
-            screenshot: node.screenshot,
-            help: pass.help,
-            helpUrl: pass.helpUrl,
-            impact: 'passed',
-            tags: pass.tags,
-            passed: true
-          });
-        });
-      }
-    });
-
-    // Sort by severity (critical first, then passed tests)
-    return results.sort((a, b) => {
-      const severityOrder = { critical: 0, serious: 1, moderate: 2, passed: 3 };
-      return severityOrder[a.severity] - severityOrder[b.severity];
-    });
-  }, [report]);
 
   // Filter results based on active tab
   const filteredResults = useMemo(() => {
