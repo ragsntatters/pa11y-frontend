@@ -33,7 +33,7 @@ export default function ProgressPage() {
         if (report.status === 'complete') {
           navigate(`/report/${id}`);
         } else if (report.status === 'error') {
-          const errorMessage = report.result?.error || 'Scan failed';
+          const errorMessage = report.error || report.result?.error || 'Scan failed';
           console.log('Setting error:', errorMessage);
           console.log('Error includes Cloudflare:', errorMessage.includes('Cloudflare protection detected'));
           setError(errorMessage);
