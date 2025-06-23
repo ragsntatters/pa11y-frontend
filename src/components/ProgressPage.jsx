@@ -25,7 +25,11 @@ export default function ProgressPage() {
           error: report.result?.error,
           fullReport: report 
         });
+        
+        // Update status
         setStatus(report.status);
+        
+        // Handle different statuses
         if (report.status === 'complete') {
           navigate(`/report/${id}`);
         } else if (report.status === 'error') {
@@ -33,21 +37,53 @@ export default function ProgressPage() {
           console.log('Setting error:', errorMessage);
           console.log('Error includes Cloudflare:', errorMessage.includes('Cloudflare protection detected'));
           setError(errorMessage);
+        } else if (report.status === 'pending') {
+          // Clear any previous error when status is pending
+          setError(null);
         }
       } catch (err) {
         console.error('Poll error:', err);
         setError(err.message);
       }
     };
+    
+    // Initial poll
     poll();
+    
+    // Set up interval for polling
     interval = setInterval(poll, 2000);
+    
     return () => clearInterval(interval);
   }, [id, navigate]);
+
+  // Debug render conditions
+  console.log('Render conditions:', {
+    status,
+    error,
+    showError: status === 'error' && error,
+    showCloudflareError: status === 'error' && error && error.includes('Cloudflare protection detected')
+  });
+
+  // Test function to manually trigger error state
+  const testErrorState = () => {
+    console.log('Testing error state...');
+    setStatus('error');
+    setError('Cloudflare protection detected. Automated scans are not possible for this site. Please whitelist the Google Cloud Platform (GCP) IP range in your Cloudflare dashboard to allow scans.');
+  };
 
   return (
     <div className="min-h-screen bg-black text-gray-100 flex items-center justify-center p-4">
       <div className="bg-[#1a1a1a] shadow-xl rounded-2xl p-8 w-full max-w-lg text-center">
         <h1 className="text-2xl font-bold text-orange-500 mb-4">Running Accessibility Scan...</h1>
+        
+        {/* Debug test button - remove this after testing */}
+        <button 
+          onClick={testErrorState}
+          className="mb-4 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+        >
+          Test Error State
+        </button>
+        
         {status === 'pending' && (
           <>
             <div className="w-full bg-gray-800 rounded-full h-4 mb-4">
@@ -56,6 +92,7 @@ export default function ProgressPage() {
             <p className="text-orange-400">Your report is being generated. This may take up to a minute.</p>
           </>
         )}
+        
         {status === 'error' && error && (
           <>
             {error.includes('Cloudflare protection detected') ? (
@@ -76,6 +113,7 @@ export default function ProgressPage() {
                 <div className="text-sm">{error}</div>
               </div>
             )}
+            
             {showCloudflareModal && (
               <Modal isOpen={showCloudflareModal} onClose={() => setShowCloudflareModal(false)} title="Allow Accessibility Scans through Cloudflare">
                 <div className="p-4 space-y-4">
