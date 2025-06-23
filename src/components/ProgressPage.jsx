@@ -9,6 +9,10 @@ export default function ProgressPage() {
   const [error, setError] = useState(null);
   const [showCloudflareModal, setShowCloudflareModal] = useState(false);
 
+  // Debug logging for render
+  console.log('ProgressPage render:', { status, error, showCloudflareModal });
+  console.log('Error check:', error && error.includes('Cloudflare protection detected'));
+
   useEffect(() => {
     let interval;
     const poll = async () => {
@@ -16,13 +20,18 @@ export default function ProgressPage() {
         const res = await fetch(`/api/report/${id}`);
         if (!res.ok) throw new Error('Failed to fetch report');
         const report = await res.json();
-        console.log('Progress poll result:', { status: report.status, error: report.result?.error });
+        console.log('Progress poll result:', { 
+          status: report.status, 
+          error: report.result?.error,
+          fullReport: report 
+        });
         setStatus(report.status);
         if (report.status === 'complete') {
           navigate(`/report/${id}`);
         } else if (report.status === 'error') {
           const errorMessage = report.result?.error || 'Scan failed';
           console.log('Setting error:', errorMessage);
+          console.log('Error includes Cloudflare:', errorMessage.includes('Cloudflare protection detected'));
           setError(errorMessage);
         }
       } catch (err) {
