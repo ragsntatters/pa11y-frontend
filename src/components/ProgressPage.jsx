@@ -16,14 +16,17 @@ export default function ProgressPage() {
         const res = await fetch(`/api/report/${id}`);
         if (!res.ok) throw new Error('Failed to fetch report');
         const report = await res.json();
+        console.log('Progress poll result:', { status: report.status, error: report.result?.error });
         setStatus(report.status);
         if (report.status === 'complete') {
           navigate(`/report/${id}`);
         } else if (report.status === 'error') {
           const errorMessage = report.result?.error || 'Scan failed';
+          console.log('Setting error:', errorMessage);
           setError(errorMessage);
         }
       } catch (err) {
+        console.error('Poll error:', err);
         setError(err.message);
       }
     };
@@ -44,12 +47,26 @@ export default function ProgressPage() {
             <p className="text-orange-400">Your report is being generated. This may take up to a minute.</p>
           </>
         )}
-        {status === 'error' && error && error.includes('Cloudflare protection detected') ? (
+        {status === 'error' && error && (
           <>
-            <p className="text-yellow-400 mt-4">
-              <strong>Cloudflare Protection Detected:</strong> This website is protected by Cloudflare, which may block automated accessibility scans.<br/>
-              If you control this website, <button className="underline text-blue-300 hover:text-blue-100" onClick={() => setShowCloudflareModal(true)}>click here for instructions on whitelisting our scanner</button>.
-            </p>
+            {error.includes('Cloudflare protection detected') ? (
+              <>
+                <div className="text-yellow-400 mt-4 mb-4">
+                  <strong>Cloudflare Protection Detected:</strong> This website is protected by Cloudflare, which may block automated accessibility scans.
+                </div>
+                <div className="text-gray-300 mb-4">
+                  If you control this website, <button className="underline text-blue-300 hover:text-blue-100" onClick={() => setShowCloudflareModal(true)}>click here for instructions on whitelisting our scanner</button>.
+                </div>
+                <div className="text-xs text-gray-500 mb-4">
+                  Error details: {error}
+                </div>
+              </>
+            ) : (
+              <div className="text-red-500 mt-4">
+                <div className="font-semibold mb-2">Scan Failed</div>
+                <div className="text-sm">{error}</div>
+              </div>
+            )}
             {showCloudflareModal && (
               <Modal isOpen={showCloudflareModal} onClose={() => setShowCloudflareModal(false)} title="Allow Accessibility Scans through Cloudflare">
                 <div className="p-4 space-y-4">
@@ -70,8 +87,6 @@ export default function ProgressPage() {
               </Modal>
             )}
           </>
-        ) : status === 'error' && (
-          <p className="text-red-500 mt-4">{error || 'An error occurred while running the scan.'}</p>
         )}
       </div>
     </div>
